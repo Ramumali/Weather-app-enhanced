@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Samsung-style weather dashboard — search any city for current conditions and forecasts.">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- Search Overlay -->
+<div class="search-overlay" id="searchOverlay">
+    <button class="search-close" id="searchClose">&times;</button>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search city…" spellcheck="false" autocomplete="off">
+        <button class="search-submit" id="searchSubmit"><img src="images/search.png" alt="search"></button>
+    </div>
+</div>
+<!-- Sidebar Drawer -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h3 class="sidebar-title">☁️ Weather</h3>
+        <button class="sidebar-close" id="sidebarClose">&times;</button>
+    </div>
+
+    <!-- Saved Cities -->
+    <div class="sidebar-section">
+        <p class="sidebar-label">⭐ Saved Cities</p>
+        <div class="saved-cities" id="savedCities">
+            <p class="sidebar-empty" id="savedEmpty">No saved cities yet. Search a city and tap ⭐ to save.</p>
+        </div>
+    </div>
+
+    <!-- Recent Searches -->
+    <div class="sidebar-section">
+        <p class="sidebar-label">🕐 Recent Searches</p>
+        <div class="recent-searches" id="recentSearches">
+            <p class="sidebar-empty" id="recentEmpty">No recent searches.</p>
+        </div>
+    </div>
+
+    <!-- Popular Cities -->
+    <div class="sidebar-section">
+        <p class="sidebar-label">🌍 Popular Cities</p>
+        <div class="popular-grid">
+            <button class="popular-btn" data-city="London">🇬🇧 London</button>
+            <button class="popular-btn" data-city="New York">🇺🇸 New York</button>
+            <button class="popular-btn" data-city="Tokyo">🇯🇵 Tokyo</button>
+            <button class="popular-btn" data-city="Paris">🇫🇷 Paris</button>
+            <button class="popular-btn" data-city="Dubai">🇦🇪 Dubai</button>
+            <button class="popular-btn" data-city="Sydney">🇦🇺 Sydney</button>
+            <button class="popular-btn" data-city="Mumbai">🇮🇳 Mumbai</button>
+            <button class="popular-btn" data-city="Singapore">🇸🇬 Singapore</button>
+        </div>
+    </div>
+
+    <!-- About -->
+    <div class="sidebar-section sidebar-about">
+        <p class="sidebar-label">ℹ️ About</p>
+        <p class="about-text">Weather Dashboard powered by OpenWeatherMap API. Built with ❤️</p>
+    </div>
+</div>
+
+<div class="app" id="app">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+        <div class="top-actions">
+            <button id="searchToggle" aria-label="Search city"><img src="images/search.png" alt="search"></button>
+            <button id="geoBtn" aria-label="My location" title="Use my location">📍</button>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-box" id="loadingBox">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="errorBox">
+        <p>⚠️ City not found. Please check the name and try again.</p>
+    </div>
+
+    <!-- HERO — current weather -->
+    <div class="hero" id="heroSection">
+        <div class="hero-top">
+            <div class="hero-left">
+                <h1 class="hero-temp" id="heroTemp">15<span>°</span></h1>
+                <p class="hero-condition" id="heroCondition">Cloudy</p>
+            </div>
+            <div class="hero-right">
+                <img src="images/clouds.png" class="hero-icon" id="heroIcon" alt="weather">
+                <div class="character-wrap" id="characterWrap"></div>
+            </div>
+        </div>
+        <div class="hero-city">
+            <h2 class="city-name" id="cityName">—</h2>
+            <p class="city-meta" id="cityMeta">— / — Feels like —</p>
+            <p class="city-datetime" id="cityDatetime">—</p>
+        </div>
+        <div class="unit-pill" id="unitPill">
+            <button class="active" data-unit="C">°C</button>
+            <button data-unit="F">°F</button>
+        </div>
+    </div>
+
+    <!-- CONTENT CARDS (shown after load) -->
+    <div id="contentCards" style="display:none;">
+
+        <!-- Summary Card -->
+        <div class="card-section" id="summaryCard">
+            <p class="summary-text" id="summaryText">—</p>
+        </div>
+
+        <!-- Hourly Forecast -->
+        <div class="card-section" id="hourlyCard">
+            <div class="hourly-scroll" id="hourlyScroll"></div>
+        </div>
+
+        <!-- Alert / Tip Slider Card -->
+        <div class="card-section alert-card" id="alertCard">
+            <div class="alert-slider" id="alertSlider">
+                <div class="alert-slide active" id="alertSlide0">
+                    <p class="alert-title">—</p>
+                    <p class="alert-subtitle">—</p>
+                </div>
+                <div class="alert-slide" id="alertSlide1">
+                    <p class="alert-title">—</p>
+                    <p class="alert-subtitle">—</p>
+                </div>
+                <div class="alert-slide" id="alertSlide2">
+                    <p class="alert-title">—</p>
+                    <p class="alert-subtitle">—</p>
+                </div>
+            </div>
+            <div class="alert-dots" id="alertDots">
+                <span class="alert-dot active" data-slide="0"></span>
+                <span class="alert-dot" data-slide="1"></span>
+                <span class="alert-dot" data-slide="2"></span>
+            </div>
+        </div>
+
+        <!-- Daily Forecast -->
+        <div class="card-section" id="dailyCard">
+            <div id="dailyContainer"></div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="card-section" id="detailsCard">
+            <div class="details-grid">
+                <div class="detail-item">
+                    <p class="detail-label">Humidity</p>
+                    <p class="detail-val" id="detHumidity">—</p>
+                </div>
+                <div class="detail-item">
+                    <p class="detail-label">Wind</p>
+                    <p class="detail-val" id="detWind">—</p>
+                </div>
+                <div class="detail-item">
+                    <p class="detail-label">Pressure</p>
+                    <p class="detail-val" id="detPressure">—</p>
+                </div>
+                <div class="detail-item">
+                    <p class="detail-label">Visibility</p>
+                    <p class="detail-val" id="detVisibility">—</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sunrise / Sunset -->
+        <div class="card-section" id="sunCard">
+            <div class="sun-strip">
+                <div class="sun-block">
+                    <div class="sun-emoji">🌅</div>
+                    <p class="sun-label">Sunrise</p>
+                    <p class="sun-value" id="sunriseVal">—</p>
+                </div>
+                <div class="sun-block">
+                    <div class="sun-emoji">🌇</div>
+                    <p class="sun-label">Sunset</p>
+                    <p class="sun-value" id="sunsetVal">—</p>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /contentCards -->
+
+</div><!-- /app -->
+
+<script>
+    // ── Config ──────────────────────────────────
+    const API_KEY  = "30e723c2b8aeca6dd6ca038d98194514";
+    const BASE     = "https://api.openweathermap.org/data/2.5";
+
+    // ── State ───────────────────────────────────
+    let unit           = "C";
+    let currentData    = null;
+    let forecastData   = null;
+
+    // ── DOM ─────────────────────────────────────
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
+
+    const searchOverlay  = $("#searchOverlay");
+    const searchInput    = $("#searchInput");
+    const loadingBox     = $("#loadingBox");
+    const errorBox       = $("#errorBox");
+    const heroSection    = $("#heroSection");
+    const contentCards   = $("#contentCards");
+    const hourlyScroll   = $("#hourlyScroll");
+    const dailyContainer = $("#dailyContainer");
+
+    // ── Util ────────────────────────────────────
+    const cToF = (c) => (c * 9 / 5) + 32;
+    const fmt  = (c) => Math.round(unit === "F" ? cToF(c) : c) + "°";
+
+    const ICON_MAP = {
+        Clouds: "images/clouds.png", Clear: "images/clear.png",
+        Rain: "images/rain.png", Drizzle: "images/drizzle.png",
+        Mist: "images/mist.png", Haze: "images/mist.png",
+        Fog: "images/mist.png", Snow: "images/snow.png",
+        Smoke: "images/mist.png", Dust: "images/mist.png",
+        Thunderstorm: "images/rain.png",
+    };
+    const icon = (main) => ICON_MAP[main] || "images/clouds.png";
+
+    function timeStr(unix, tz) {
+        const d = new Date((unix + tz) * 1000);
+        let h = d.getUTCHours(), m = d.getUTCMinutes();
+        const ap = h >= 12 ? "PM" : "AM";
+        h = h % 12 || 12;
+        return `${h}:${String(m).padStart(2,"0")} ${ap}`;
+    }
+
+    function dateStr(tz) {
+        const now = new Date();
+        const local = new Date(now.getTime() + now.getTimezoneOffset() * 60000 + tz * 1000);
+        return local.toLocaleDateString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+    }
+
+    function dayName(dtTxt, idx) {
+        const d = new Date(dtTxt);
+        const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        const today = new Date();
+        if (d.toDateString() === today.toDateString()) return "Today";
+        const tmr = new Date(today); tmr.setDate(tmr.getDate() + 1);
+        if (d.toDateString() === tmr.toDateString()) return "Tomorrow";
+        return days[d.getDay()];
+    }
+
+    // ── Show / Hide ─────────────────────────────
+    function showLoading() {
+        loadingBox.style.display = "block";
+        errorBox.style.display = "none";
+        heroSection.style.display = "none";
+        contentCards.style.display = "none";
+    }
+    function hideLoading() { loadingBox.style.display = "none"; }
+
+    // ── Render ───────────────────────────────────
+    function renderHero() {
+        const d = currentData;
+        $("#heroTemp").innerHTML = `${Math.round(unit==="F"?cToF(d.main.temp):d.main.temp)}<span>°</span>`;
+        $("#heroCondition").textContent = d.weather[0].description;
+        $("#heroIcon").src = icon(d.weather[0].main);
+        showCharacter(d.weather[0].main);
+        $("#cityName").textContent = d.name;
+        const hi = fmt(d.main.temp_max), lo = fmt(d.main.temp_min), fl = fmt(d.main.feels_like);
+        $("#cityMeta").textContent = `${hi} / ${lo}  Feels like ${fl}`;
+        $("#cityDatetime").textContent = dateStr(d.timezone);
+
+        // Details
+        $("#detHumidity").textContent   = d.main.humidity + "%";
+        $("#detWind").textContent       = d.wind.speed + " km/h";
+        $("#detPressure").textContent   = d.main.pressure + " hPa";
+        $("#detVisibility").textContent = (d.visibility / 1000).toFixed(1) + " km";
+        $("#sunriseVal").textContent    = timeStr(d.sys.sunrise, d.timezone);
+        $("#sunsetVal").textContent     = timeStr(d.sys.sunset, d.timezone);
+
+        // Summary
+        const desc = d.weather[0].description;
+        const hiC = Math.round(d.main.temp_max), loC = Math.round(d.main.temp_min);
+        const uLabel = unit === "F" ? "F" : "C";
+        const hiU = unit === "F" ? Math.round(cToF(hiC)) : hiC;
+        const loU = unit === "F" ? Math.round(cToF(loC)) : loC;
+        $("#summaryText").textContent = `${capitalize(desc)}. Highs ${hiU} to ${hiU+2}°${uLabel} and lows ${loU-2} to ${loU}°${uLabel}.`;
+
+        // Alert card
+        generateAlert(d);
+    }
+
+    function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+    // ── Alert Slider ─────────────────────────────
+    let alertInterval = null;
+    let alertCurrent  = 0;
+
+    function generateAlert(d) {
+        const main = d.weather[0].main;
+        const temp = d.main.temp;
+        let tips = [];
+
+        if (main === "Rain" || main === "Drizzle" || main === "Thunderstorm") {
+            tips = [
+                { title: "Grab an Umbrella! ☂️", sub: "Rain expected — don't forget your umbrella before heading out." },
+                { title: "Watch for Puddles! 💧", sub: "Roads may be wet and slippery — walk carefully." },
+                { title: "Stay Cozy Indoors! 🏠", sub: "Perfect weather for a warm drink and a good book." },
+            ];
+        } else if (main === "Snow") {
+            tips = [
+                { title: "Bundle Up! ❄️", sub: "Snowfall expected — wear layers and dress warmly." },
+                { title: "Drive Carefully! 🚗", sub: "Snow on roads — reduce speed and keep safe distance." },
+                { title: "Enjoy the Snow! ⛄", sub: "Great day to build a snowman or have a snowball fight!" },
+            ];
+        } else if (main === "Clear") {
+            tips = [
+                { title: "Enjoy the Sunshine! ☀️", sub: "Clear skies all day — perfect weather to be outside." },
+                { title: "Don't Forget Sunscreen! 🧴", sub: "UV levels may be high — protect your skin." },
+                { title: "Go for a Walk! 🚶", sub: "Beautiful day for outdoor activities and fresh air." },
+            ];
+        } else if (main === "Mist" || main === "Haze" || main === "Fog" || main === "Smoke") {
+            tips = [
+                { title: "Low Visibility! 🌫️", sub: "Fog is thick — drive slow and use fog lights." },
+                { title: "Stay Warm! 🧣", sub: "Misty weather can feel chilly — layer up." },
+                { title: "Be Careful Outside! ⚠️", sub: "Visibility is reduced — stay alert while walking." },
+            ];
+        } else if (temp > 35) {
+            tips = [
+                { title: "Stay Hydrated! 🥤", sub: "Extremely hot — drink water frequently." },
+                { title: "Avoid Direct Sun! 🌡️", sub: "Peak heat hours: 11 AM–3 PM. Stay in shade." },
+                { title: "Wear Light Clothes! 👕", sub: "Choose breathable fabrics to stay cool." },
+            ];
+        } else if (temp < 5) {
+            tips = [
+                { title: "It's Freezing! 🥶", sub: "Temperatures below 5°C — bundle up tight." },
+                { title: "Hot Drinks Help! ☕", sub: "Warm beverages will help you stay cozy." },
+                { title: "Check Your Pipes! 🔧", sub: "Freezing temps can cause pipe bursts — stay prepared." },
+            ];
+        } else {
+            tips = [
+                { title: "Have a Great Day! 🌤️", sub: "Overall pleasant weather — enjoy your day." },
+                { title: "Perfect for Outdoors! 🌿", sub: "Comfortable temperature — great for a walk." },
+                { title: "Stay Active! 💪", sub: "Nice weather for exercise or outdoor sports." },
+            ];
+        }
+
+        // Set slide content
+        tips.forEach((tip, i) => {
+            const slide = $("#alertSlide" + i);
+            slide.querySelector(".alert-title").textContent = tip.title;
+            slide.querySelector(".alert-subtitle").textContent = tip.sub;
+        });
+
+        // Reset slider
+        alertCurrent = 0;
+        showAlertSlide(0);
+
+        // Auto-cycle every 4 seconds
+        if (alertInterval) clearInterval(alertInterval);
+        alertInterval = setInterval(() => {
+            alertCurrent = (alertCurrent + 1) % 3;
+            showAlertSlide(alertCurrent);
+        }, 4000);
+    }
+
+    function showAlertSlide(idx) {
+        const slides = $$("#alertSlider .alert-slide");
+        const dots   = $$("#alertDots .alert-dot");
+        slides.forEach((s, i) => {
+            s.classList.toggle("active", i === idx);
+            s.style.transform = `translateX(${(i - idx) * 100}%)`;
+        });
+        dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+    }
+
+    // Click dots to jump to slide
+    $$("#alertDots .alert-dot").forEach(dot => {
+        dot.addEventListener("click", () => {
+            alertCurrent = parseInt(dot.dataset.slide);
+            showAlertSlide(alertCurrent);
+            if (alertInterval) clearInterval(alertInterval);
+            alertInterval = setInterval(() => {
+                alertCurrent = (alertCurrent + 1) % 3;
+                showAlertSlide(alertCurrent);
+            }, 4000);
+        });
+    });
+
+    function renderHourly() {
+        hourlyScroll.innerHTML = "";
+        if (!forecastData) return;
+
+        const items = forecastData.list.slice(0, 8);
+        const sunsetUnix = currentData.sys.sunset;
+        const tz = currentData.timezone;
+
+        items.forEach((item, i) => {
+            const h = new Date((item.dt + tz) * 1000).getUTCHours();
+            const ampm = h >= 12 ? "PM" : "AM";
+            const h12 = h % 12 || 12;
+            const rainChance = item.pop ? Math.round(item.pop * 100) : 0;
+
+            const el = document.createElement("div");
+            el.className = "hourly-item";
+            el.innerHTML = `
+                <span class="hourly-time">${h12} ${ampm}</span>
+                <img class="hourly-icon" src="${icon(item.weather[0].main)}" alt="${item.weather[0].description}">
+                <span class="hourly-temp">${fmt(item.main.temp)}</span>
+                ${rainChance > 0 ? `<span class="hourly-rain">💧${rainChance}%</span>` : `<span class="hourly-rain">&nbsp;</span>`}
+            `;
+            hourlyScroll.appendChild(el);
+
+            // Insert sunset marker between items
+            if (i < items.length - 1) {
+                const curDt = item.dt;
+                const nextDt = items[i + 1].dt;
+                if (sunsetUnix >= curDt && sunsetUnix < nextDt) {
+                    const sun = document.createElement("div");
+                    sun.className = "hourly-item";
+                    sun.innerHTML = `
+                        <span class="hourly-time sunset-label">Sunset</span>
+                        <span style="font-size:28px;">🌇</span>
+                        <span class="hourly-temp">${timeStr(sunsetUnix, tz)}</span>
+                        <span class="hourly-rain">&nbsp;</span>
+                    `;
+                    hourlyScroll.appendChild(sun);
+                }
+            }
+        });
+    }
+
+    function renderDaily() {
+        dailyContainer.innerHTML = "";
+        if (!forecastData) return;
+
+        const dailyMap = {};
+        forecastData.list.forEach((item) => {
+            const date = item.dt_txt.split(" ")[0];
+            if (!dailyMap[date]) dailyMap[date] = { items: [] };
+            dailyMap[date].items.push(item);
+        });
+
+        const days = Object.entries(dailyMap).slice(0, 5);
+        days.forEach(([date, info], idx) => {
+            const temps = info.items.map(i => i.main.temp);
+            const high = Math.max(...temps);
+            const low  = Math.min(...temps);
+            const noon = info.items.reduce((a, b) => {
+                const ha = parseInt(a.dt_txt.split(" ")[1]);
+                const hb = parseInt(b.dt_txt.split(" ")[1]);
+                return Math.abs(ha - 12) < Math.abs(hb - 12) ? a : b;
+            });
+            const rainChance = Math.round(Math.max(...info.items.map(i => i.pop || 0)) * 100);
+
+            const row = document.createElement("div");
+            row.className = "daily-row";
+            const dn = dayName(info.items[0].dt_txt, idx);
+            row.innerHTML = `
+                <span class="daily-day ${dn==='Today'?'today':''}">${dn}</span>
+                <span class="daily-meta">
+                    ${rainChance > 0 ? `<span class="daily-rain">💧${rainChance}%</span>` : ''}
+                    <img class="daily-icon" src="${icon(noon.weather[0].main)}" alt="${noon.weather[0].description}">
+                </span>
+                <span class="daily-temps">
+                    <span class="daily-high">${fmt(high)}</span>
+                    <span class="daily-low">${fmt(low)}</span>
+                </span>
+            `;
+            dailyContainer.appendChild(row);
+        });
+    }
+
+    function renderAll() {
+        renderHero();
+        renderHourly();
+        renderDaily();
+    }
+
+    // ── Fetch ───────────────────────────────────
+    async function fetchWeather(city) {
+        showLoading();
+        try {
+            const res = await fetch(`${BASE}/weather?units=metric&q=${encodeURIComponent(city)}&appid=${API_KEY}`);
+            if (!res.ok) { hideLoading(); errorBox.style.display="block"; return; }
+            currentData = await res.json();
+
+            const fRes = await fetch(`${BASE}/forecast?units=metric&q=${encodeURIComponent(city)}&appid=${API_KEY}`);
+            if (fRes.ok) forecastData = await fRes.json();
+
+            hideLoading();
+            heroSection.style.display = "block";
+            contentCards.style.display = "block";
+            errorBox.style.display = "none";
+            renderAll();
+            updateBackground(currentData.weather[0].main);
+        } catch(e) {
+            hideLoading();
+            errorBox.style.display = "block";
+        }
+    }
+
+    async function fetchByCoords(lat, lon) {
+        showLoading();
+        try {
+            const res = await fetch(`${BASE}/weather?units=metric&lat=${lat}&lon=${lon}&appid=${API_KEY}`);
+            if (!res.ok) { hideLoading(); errorBox.style.display="block"; return; }
+            currentData = await res.json();
+
+            const fRes = await fetch(`${BASE}/forecast?units=metric&lat=${lat}&lon=${lon}&appid=${API_KEY}`);
+            if (fRes.ok) forecastData = await fRes.json();
+
+            hideLoading();
+            heroSection.style.display = "block";
+            contentCards.style.display = "block";
+            errorBox.style.display = "none";
+            renderAll();
+            updateBackground(currentData.weather[0].main);
+        } catch(e) {
+            hideLoading();
+            errorBox.style.display = "block";
+        }
+    }
+
+    // ── Dynamic Background Color ────────────────
+    function updateBackground(main) {
+        const gradients = {
+            Clear:        "linear-gradient(180deg, #3a7bd5 0%, #6fb3f2 50%, #87ceeb 100%)",
+            Clouds:       "linear-gradient(180deg, #7b7fda 0%, #8e91e0 50%, #b3b5ef 100%)",
+            Rain:         "linear-gradient(180deg, #4a5568 0%, #636e7f 50%, #8796a5 100%)",
+            Drizzle:      "linear-gradient(180deg, #5a6880 0%, #7a8a9e 50%, #99aabb 100%)",
+            Thunderstorm: "linear-gradient(180deg, #2d3748 0%, #4a5568 50%, #6b7b8d 100%)",
+            Snow:         "linear-gradient(180deg, #a8c0d6 0%, #c5d5e4 50%, #e0e8ef 100%)",
+            Mist:         "linear-gradient(180deg, #8e9eab 0%, #a8b5c0 50%, #c5ced5 100%)",
+            Haze:         "linear-gradient(180deg, #8e9eab 0%, #a8b5c0 50%, #c5ced5 100%)",
+            Fog:          "linear-gradient(180deg, #8e9eab 0%, #a8b5c0 50%, #c5ced5 100%)",
+        };
+        document.body.style.background = gradients[main] || gradients.Clouds;
+    }
+
+    // ── Events ──────────────────────────────────
+    // Search overlay
+    $("#searchToggle").addEventListener("click", () => {
+        searchOverlay.classList.add("active");
+        searchInput.value = "";
+        searchInput.focus();
+    });
+    $("#searchClose").addEventListener("click", () => searchOverlay.classList.remove("active"));
+
+    function doSearch() {
+        const city = searchInput.value.trim();
+        if (city) {
+            searchOverlay.classList.remove("active");
+            fetchWeather(city);
+        }
+    }
+    $("#searchSubmit").addEventListener("click", doSearch);
+    searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+
+    // Geolocation
+    $("#geoBtn").addEventListener("click", () => {
+        if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => fetchByCoords(pos.coords.latitude, pos.coords.longitude),
+            ()    => alert("Location access denied.")
+        );
+    });
+
+    // Unit toggle
+    $$("#unitPill button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (btn.dataset.unit === unit) return;
+            unit = btn.dataset.unit;
+            $$("#unitPill button").forEach(b => b.classList.toggle("active", b.dataset.unit === unit));
+            if (currentData) renderAll();
+        });
+    });
+
+    // Click outside search to close
+    searchOverlay.addEventListener("click", (e) => {
+        if (e.target === searchOverlay) searchOverlay.classList.remove("active");
+    });
+
+    // ── Character Illustrations ────────────────────
+    function showCharacter(weatherMain) {
+        const wrap = $("#characterWrap");
+
+        // SVG character factory
+        const characters = {
+            // 🌧️ Rain — person holding umbrella
+            Rain: `<svg viewBox="0 0 200 260" class="character char-rain">
+                <!-- Umbrella -->
+                <g class="umbrella-sway">
+                    <path d="M60 50 Q100 -10 140 50 Z" fill="#e74c3c" opacity="0.9"/>
+                    <line x1="100" y1="50" x2="100" y2="155" stroke="#5a3825" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M100 155 Q95 165 88 160" fill="none" stroke="#5a3825" stroke-width="3" stroke-linecap="round"/>
+                </g>
+                <!-- Rain drops -->
+                <g class="rain-drops">
+                    <line x1="40" y1="30" x2="35" y2="50" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"><animate attributeName="y1" values="30;80;30" dur="0.8s" repeatCount="indefinite"/><animate attributeName="y2" values="50;100;50" dur="0.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0;1" dur="0.8s" repeatCount="indefinite"/></line>
+                    <line x1="160" y1="40" x2="155" y2="60" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"><animate attributeName="y1" values="40;90;40" dur="1s" repeatCount="indefinite"/><animate attributeName="y2" values="60;110;60" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/></line>
+                    <line x1="55" y1="60" x2="50" y2="80" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round"><animate attributeName="y1" values="60;110;60" dur="1.2s" repeatCount="indefinite"/><animate attributeName="y2" values="80;130;80" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0;1" dur="1.2s" repeatCount="indefinite"/></line>
+                </g>
+                <!-- Head -->
+                <circle cx="100" cy="105" r="22" fill="#f4c28f"/>
+                <!-- Hair -->
+                <ellipse cx="100" cy="88" rx="24" ry="12" fill="#4a3728"/>
+                <!-- Eyes -->
+                <circle cx="92" cy="104" r="2.5" fill="#333"/><circle cx="108" cy="104" r="2.5" fill="#333"/>
+                <!-- Mouth -->
+                <path d="M94 114 Q100 118 106 114" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- Body — raincoat -->
+                <path d="M70 130 Q72 125 100 125 Q128 125 130 130 L135 190 Q100 195 65 190 Z" fill="#f1c40f" opacity="0.9"/>
+                <!-- Coat buttons -->
+                <circle cx="100" cy="150" r="2" fill="#c9a10a"/><circle cx="100" cy="165" r="2" fill="#c9a10a"/><circle cx="100" cy="180" r="2" fill="#c9a10a"/>
+                <!-- Arm holding umbrella -->
+                <path d="M75 140 Q65 135 72 125" fill="none" stroke="#f4c28f" stroke-width="6" stroke-linecap="round"/>
+                <path d="M125 140 Q135 135 128 125" fill="none" stroke="#f4c28f" stroke-width="6" stroke-linecap="round"/>
+                <!-- Legs -->
+                <rect x="82" y="190" width="12" height="35" rx="5" fill="#34495e"/>
+                <rect x="106" y="190" width="12" height="35" rx="5" fill="#34495e"/>
+                <!-- Boots -->
+                <ellipse cx="88" cy="228" rx="10" ry="5" fill="#f1c40f"/>
+                <ellipse cx="112" cy="228" rx="10" ry="5" fill="#f1c40f"/>
+            </svg>`,
+
+            Drizzle: null,  // will fallback to Rain
+            Thunderstorm: null,
+
+            // ☀️ Clear — beach person with sunglasses
+            Clear: `<svg viewBox="0 0 200 260" class="character char-clear">
+                <!-- Sun rays -->
+                <g class="sun-rotate">
+                    <circle cx="155" cy="40" r="22" fill="#f9d71c" opacity="0.25"/>
+                    <circle cx="155" cy="40" r="14" fill="#f9d71c" opacity="0.4"/>
+                </g>
+                <!-- Head -->
+                <circle cx="100" cy="90" r="24" fill="#e8b87e"/>
+                <!-- Sunglasses -->
+                <rect x="82" y="84" width="15" height="10" rx="4" fill="#222"/><rect x="103" y="84" width="15" height="10" rx="4" fill="#222"/>
+                <line x1="97" y1="89" x2="103" y2="89" stroke="#222" stroke-width="2"/>
+                <line x1="82" y1="87" x2="75" y2="83" stroke="#222" stroke-width="1.5"/><line x1="118" y1="87" x2="125" y2="83" stroke="#222" stroke-width="1.5"/>
+                <!-- Hat -->
+                <ellipse cx="100" cy="72" rx="35" ry="6" fill="#e8d5a3"/>
+                <path d="M78 72 Q80 50 100 48 Q120 50 122 72 Z" fill="#e8d5a3"/>
+                <rect x="78" y="69" width="44" height="5" rx="2" fill="#d4a76a"/>
+                <!-- Smile -->
+                <path d="M90 102 Q100 112 110 102" fill="none" stroke="#8B6914" stroke-width="2" stroke-linecap="round"/>
+                <!-- Body — Hawaiian shirt -->
+                <path d="M68 118 Q72 112 100 112 Q128 112 132 118 L138 185 Q100 190 62 185 Z" fill="#2ecc71"/>
+                <!-- Shirt pattern -->
+                <circle cx="85" cy="140" r="4" fill="#27ae60" opacity="0.5"/><circle cx="115" cy="150" r="5" fill="#27ae60" opacity="0.5"/><circle cx="90" cy="165" r="3" fill="#f39c12" opacity="0.4"/><circle cx="110" cy="135" r="3" fill="#f39c12" opacity="0.4"/>
+                <!-- Arms -->
+                <path d="M68 125 Q45 140 50 155" fill="none" stroke="#e8b87e" stroke-width="8" stroke-linecap="round"/>
+                <path d="M132 125 Q155 140 150 155" fill="none" stroke="#e8b87e" stroke-width="8" stroke-linecap="round"/>
+                <!-- Shorts -->
+                <rect x="75" y="185" width="50" height="22" rx="6" fill="#3498db"/>
+                <!-- Legs -->
+                <rect x="80" y="205" width="12" height="30" rx="5" fill="#e8b87e"/>
+                <rect x="108" y="205" width="12" height="30" rx="5" fill="#e8b87e"/>
+                <!-- Flip flops -->
+                <ellipse cx="86" cy="238" rx="10" ry="4" fill="#e67e22"/>
+                <ellipse cx="114" cy="238" rx="10" ry="4" fill="#e67e22"/>
+                <!-- Wave hand -->
+                <circle cx="50" cy="158" r="6" fill="#e8b87e"/>
+            </svg>`,
+
+            // ☁️ Clouds — person in jacket
+            Clouds: `<svg viewBox="0 0 200 260" class="character char-clouds">
+                <!-- Floating cloud -->
+                <g class="cloud-float">
+                    <ellipse cx="150" cy="45" rx="25" ry="14" fill="rgba(255,255,255,0.3)"/>
+                    <ellipse cx="140" cy="40" rx="15" ry="10" fill="rgba(255,255,255,0.25)"/>
+                    <ellipse cx="162" cy="42" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
+                </g>
+                <!-- Head -->
+                <circle cx="100" cy="95" r="23" fill="#f4c28f"/>
+                <!-- Hair -->
+                <path d="M77 90 Q78 68 100 65 Q122 68 123 90 Q115 78 100 76 Q85 78 77 90 Z" fill="#5a3825" class="hair-wave"/>
+                <!-- Eyes -->
+                <circle cx="92" cy="93" r="2.5" fill="#333"/><circle cx="108" cy="93" r="2.5" fill="#333"/>
+                <!-- Slight smile -->
+                <path d="M95 105 Q100 109 105 105" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- Scarf -->
+                <path d="M80 118 Q100 125 120 118 Q122 130 115 135 L85 135 Q78 130 80 118 Z" fill="#e74c3c"/>
+                <rect x="95" y="130" width="10" height="22" rx="3" fill="#c0392b"/>
+                <!-- Body — jacket -->
+                <path d="M68 130 Q72 122 100 122 Q128 122 132 130 L138 195 Q100 200 62 195 Z" fill="#34495e"/>
+                <!-- Jacket zipper -->
+                <line x1="100" y1="135" x2="100" y2="192" stroke="#4a6178" stroke-width="2"/>
+                <!-- Pocket -->
+                <rect x="72" y="165" width="18" height="12" rx="3" fill="none" stroke="#4a6178" stroke-width="1.5"/>
+                <rect x="110" y="165" width="18" height="12" rx="3" fill="none" stroke="#4a6178" stroke-width="1.5"/>
+                <!-- Arms in pockets -->
+                <path d="M68 135 Q55 150 60 170 Q65 172 72 168" fill="none" stroke="#34495e" stroke-width="10" stroke-linecap="round"/>
+                <path d="M132 135 Q145 150 140 170 Q135 172 128 168" fill="none" stroke="#34495e" stroke-width="10" stroke-linecap="round"/>
+                <!-- Pants -->
+                <rect x="78" y="195" width="14" height="35" rx="6" fill="#2c3e50"/>
+                <rect x="108" y="195" width="14" height="35" rx="6" fill="#2c3e50"/>
+                <!-- Shoes -->
+                <ellipse cx="85" cy="233" rx="12" ry="5" fill="#2c3e50"/>
+                <ellipse cx="115" cy="233" rx="12" ry="5" fill="#2c3e50"/>
+            </svg>`,
+
+            // ❄️ Snow — bundled up person
+            Snow: `<svg viewBox="0 0 200 260" class="character char-snow">
+                <!-- Snowflakes -->
+                <g class="snow-fall">
+                    <text x="40" y="40" font-size="12" fill="rgba(255,255,255,0.6)">❄</text>
+                    <text x="145" y="60" font-size="10" fill="rgba(255,255,255,0.5)"><animate attributeName="y" values="30;120;30" dur="3s" repeatCount="indefinite"/>❄</text>
+                    <text x="160" y="25" font-size="8" fill="rgba(255,255,255,0.4)"><animate attributeName="y" values="25;100;25" dur="4s" repeatCount="indefinite"/>❄</text>
+                    <text x="55" y="70" font-size="9" fill="rgba(255,255,255,0.3)"><animate attributeName="y" values="50;130;50" dur="3.5s" repeatCount="indefinite"/>❄</text>
+                </g>
+                <!-- Head -->
+                <circle cx="100" cy="92" r="23" fill="#f4c28f"/>
+                <!-- Beanie hat -->
+                <path d="M76 88 Q78 60 100 56 Q122 60 124 88 Z" fill="#e74c3c"/>
+                <rect x="74" y="84" width="52" height="8" rx="4" fill="#c0392b"/>
+                <circle cx="100" cy="56" r="6" fill="#e74c3c"/>
+                <!-- Eyes -->
+                <circle cx="92" cy="92" r="2.5" fill="#333"/><circle cx="108" cy="92" r="2.5" fill="#333"/>
+                <!-- Rosy cheeks -->
+                <circle cx="84" cy="100" r="5" fill="#e8a0a0" opacity="0.4"/><circle cx="116" cy="100" r="5" fill="#e8a0a0" opacity="0.4"/>
+                <!-- Mouth -->
+                <path d="M96 105 Q100 108 104 105" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- Big scarf -->
+                <path d="M72 115 Q100 128 128 115 Q132 130 125 140 L75 140 Q68 130 72 115 Z" fill="#2ecc71"/>
+                <rect x="90" y="135" width="15" height="30" rx="4" fill="#27ae60"/>
+                <!-- Puffer jacket -->
+                <path d="M62 138 Q66 128 100 128 Q134 128 138 138 L142 198 Q100 205 58 198 Z" fill="#3498db"/>
+                <!-- Puffer segments -->
+                <path d="M65 150 Q100 155 135 150" fill="none" stroke="#2980b9" stroke-width="1" opacity="0.5"/>
+                <path d="M63 165 Q100 170 137 165" fill="none" stroke="#2980b9" stroke-width="1" opacity="0.5"/>
+                <path d="M62 180 Q100 185 138 180" fill="none" stroke="#2980b9" stroke-width="1" opacity="0.5"/>
+                <!-- Arms hugging self -->
+                <path d="M65 145 Q48 160 58 178" fill="none" stroke="#3498db" stroke-width="12" stroke-linecap="round"/>
+                <path d="M135 145 Q152 160 142 178" fill="none" stroke="#3498db" stroke-width="12" stroke-linecap="round"/>
+                <!-- Mittens -->
+                <circle cx="58" cy="180" r="7" fill="#e74c3c"/><circle cx="142" cy="180" r="7" fill="#e74c3c"/>
+                <!-- Pants -->
+                <rect x="78" y="198" width="14" height="32" rx="6" fill="#2c3e50"/>
+                <rect x="108" y="198" width="14" height="32" rx="6" fill="#2c3e50"/>
+                <!-- Boots -->
+                <path d="M74 228 Q78 236 98 236 L98 228 Z" fill="#5a3825"/>
+                <path d="M126 228 Q122 236 102 236 L102 228 Z" fill="#5a3825"/>
+            </svg>`,
+
+            // 🌫️ Mist — person with scarf covering face
+            Mist: `<svg viewBox="0 0 200 260" class="character char-mist">
+                <!-- Fog layers -->
+                <g class="fog-drift">
+                    <rect x="20" y="180" width="160" height="6" rx="3" fill="rgba(255,255,255,0.12)"/>
+                    <rect x="30" y="200" width="140" height="5" rx="3" fill="rgba(255,255,255,0.1)"/>
+                    <rect x="10" y="220" width="180" height="5" rx="3" fill="rgba(255,255,255,0.08)"/>
+                </g>
+                <!-- Head -->
+                <circle cx="100" cy="90" r="23" fill="#f4c28f"/>
+                <!-- Hair blowing -->
+                <path d="M77 85 Q80 60 100 58 Q120 60 123 85 Q115 72 100 70 Q85 72 77 85 Z" fill="#8B6914" class="hair-wave"/>
+                <path d="M120 70 Q135 62 140 72" fill="none" stroke="#8B6914" stroke-width="3" stroke-linecap="round" class="hair-strand"/>
+                <!-- Eyes squinting -->
+                <path d="M88 88 Q92 86 96 88" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M104 88 Q108 86 112 88" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- Nose -->
+                <circle cx="100" cy="96" r="1.5" fill="#d4a76a"/>
+                <!-- Scarf covering mouth -->
+                <path d="M75 100 Q100 110 125 100 L128 118 Q100 128 72 118 Z" fill="#9b59b6"/>
+                <rect x="92" y="115" width="12" height="28" rx="4" fill="#8e44ad"/>
+                <!-- Body — long coat -->
+                <path d="M65 120 Q70 112 100 112 Q130 112 135 120 L140 200 Q100 206 60 200 Z" fill="#7f8c8d"/>
+                <!-- Coat collar -->
+                <path d="M75 120 Q100 115 125 120" fill="none" stroke="#6c7a7d" stroke-width="3" stroke-linecap="round"/>
+                <!-- Arms -->
+                <path d="M65 130 Q50 150 55 170" fill="none" stroke="#7f8c8d" stroke-width="10" stroke-linecap="round"/>
+                <path d="M135 130 Q150 150 145 170" fill="none" stroke="#7f8c8d" stroke-width="10" stroke-linecap="round"/>
+                <!-- Hands -->
+                <circle cx="55" cy="172" r="6" fill="#f4c28f"/><circle cx="145" cy="172" r="6" fill="#f4c28f"/>
+                <!-- Legs -->
+                <rect x="80" y="200" width="12" height="32" rx="5" fill="#34495e"/>
+                <rect x="108" y="200" width="12" height="32" rx="5" fill="#34495e"/>
+                <!-- Shoes -->
+                <ellipse cx="86" cy="234" rx="11" ry="5" fill="#2c3e50"/>
+                <ellipse cx="114" cy="234" rx="11" ry="5" fill="#2c3e50"/>
+            </svg>`
+        };
+
+        // Aliases
+        characters.Drizzle = characters.Rain;
+        characters.Thunderstorm = characters.Rain;
+        characters.Haze = characters.Mist;
+        characters.Fog = characters.Mist;
+        characters.Smoke = characters.Mist;
+        characters.Dust = characters.Mist;
+
+        const svg = characters[weatherMain] || characters.Clouds;
+        wrap.innerHTML = svg;
+        wrap.style.animation = "none";
+        void wrap.offsetWidth; // reflow
+        wrap.style.animation = "charPop 0.6s ease forwards";
+    }
+
+    // ── Sidebar ─────────────────────────────────
+    const sidebar        = $("#sidebar");
+    const sidebarOverlay = $("#sidebarOverlay");
+
+    function openSidebar()  { sidebar.classList.add("open"); sidebarOverlay.classList.add("open"); }
+    function closeSidebar() { sidebar.classList.remove("open"); sidebarOverlay.classList.remove("open"); }
+
+    $("#menuBtn").addEventListener("click", openSidebar);
+    $("#sidebarClose").addEventListener("click", closeSidebar);
+    sidebarOverlay.addEventListener("click", closeSidebar);
+
+    // ── Saved Cities (localStorage) ─────────────
+    function getSavedCities() {
+        try { return JSON.parse(localStorage.getItem("weatherSavedCities")) || []; }
+        catch { return []; }
+    }
+    function saveCities(list) { localStorage.setItem("weatherSavedCities", JSON.stringify(list)); }
+
+    function renderSavedCities() {
+        const list = getSavedCities();
+        const container = $("#savedCities");
+        $("#savedEmpty").style.display = list.length ? "none" : "block";
+
+        // Remove old city buttons (keep the empty msg)
+        container.querySelectorAll(".saved-city-btn").forEach(b => b.remove());
+
+        list.forEach(city => {
+            const btn = document.createElement("button");
+            btn.className = "saved-city-btn";
+            btn.innerHTML = `<span class="saved-city-name">${city}</span><span class="saved-city-remove" data-city="${city}">✕</span>`;
+            btn.addEventListener("click", (e) => {
+                if (e.target.classList.contains("saved-city-remove")) {
+                    removeSavedCity(e.target.dataset.city);
+                    return;
+                }
+                closeSidebar();
+                fetchWeather(city);
+            });
+            container.appendChild(btn);
+        });
+
+        // Update star button state
+        updateStarBtn();
+    }
+
+    function addSavedCity(city) {
+        const list = getSavedCities();
+        const normalized = city.trim();
+        if (!list.find(c => c.toLowerCase() === normalized.toLowerCase())) {
+            list.unshift(normalized);
+            if (list.length > 10) list.pop();
+            saveCities(list);
+            renderSavedCities();
+        }
+    }
+
+    function removeSavedCity(city) {
+        let list = getSavedCities();
+        list = list.filter(c => c.toLowerCase() !== city.toLowerCase());
+        saveCities(list);
+        renderSavedCities();
+    }
+
+    function isCitySaved(city) {
+        return getSavedCities().some(c => c.toLowerCase() === city.trim().toLowerCase());
+    }
+
+    // ── Star/Favorite Button ────────────────────
+    // Inject a star btn into hero-city after weather loads
+    function updateStarBtn() {
+        let starBtn = $("#starBtn");
+        if (!starBtn) {
+            starBtn = document.createElement("button");
+            starBtn.id = "starBtn";
+            starBtn.className = "star-btn";
+            starBtn.title = "Save city";
+            $("#cityName").insertAdjacentElement("afterend", starBtn);
+            starBtn.addEventListener("click", () => {
+                if (!currentData) return;
+                const name = currentData.name;
+                if (isCitySaved(name)) removeSavedCity(name);
+                else addSavedCity(name);
+            });
+        }
+        if (currentData && isCitySaved(currentData.name)) {
+            starBtn.textContent = "★";
+            starBtn.classList.add("saved");
+        } else {
+            starBtn.textContent = "☆";
+            starBtn.classList.remove("saved");
+        }
+    }
+
+    // ── Recent Searches (localStorage) ───────────
+    function getRecent() {
+        try { return JSON.parse(localStorage.getItem("weatherRecent")) || []; }
+        catch { return []; }
+    }
+    function saveRecent(list) { localStorage.setItem("weatherRecent", JSON.stringify(list)); }
+
+    function addRecent(city) {
+        let list = getRecent();
+        list = list.filter(c => c.toLowerCase() !== city.toLowerCase());
+        list.unshift(city);
+        if (list.length > 8) list.pop();
+        saveRecent(list);
+        renderRecent();
+    }
+
+    function renderRecent() {
+        const list = getRecent();
+        const container = $("#recentSearches");
+        $("#recentEmpty").style.display = list.length ? "none" : "block";
+        container.querySelectorAll(".recent-btn").forEach(b => b.remove());
+
+        list.forEach(city => {
+            const btn = document.createElement("button");
+            btn.className = "recent-btn";
+            btn.textContent = city;
+            btn.addEventListener("click", () => {
+                closeSidebar();
+                fetchWeather(city);
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // Hook into fetchWeather to track recents
+    const _origFetch = fetchWeather;
+    fetchWeather = async function(city) {
+        await _origFetch(city);
+        if (currentData) {
+            addRecent(currentData.name);
+            updateStarBtn();
+        }
+    };
+    const _origFetchCoords = fetchByCoords;
+    fetchByCoords = async function(lat, lon) {
+        await _origFetchCoords(lat, lon);
+        if (currentData) {
+            addRecent(currentData.name);
+            updateStarBtn();
+        }
+    };
+
+    // Popular city buttons
+    $$(".popular-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            closeSidebar();
+            fetchWeather(btn.dataset.city);
+        });
+    });
+
+    // Init sidebar content
+    renderSavedCities();
+    renderRecent();
+
+    // ── Auto-load current location on page launch ──
+    (function autoLoad() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => fetchByCoords(pos.coords.latitude, pos.coords.longitude),
+                ()    => fetchWeather("New Delhi")   // fallback if denied
+            );
+        } else {
+            fetchWeather("New Delhi");               // fallback if unsupported
+        }
+    })();
+</script>
+
+</body>
+</html>
