@@ -7,6 +7,8 @@
     <meta name="description" content="Samsung-style weather dashboard — search any city for current conditions and forecasts.">
     <title>Weather Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
@@ -16,7 +18,13 @@
     <button class="search-close" id="searchClose">&times;</button>
     <div class="search-box">
         <input type="text" id="searchInput" placeholder="Search city…" spellcheck="false" autocomplete="off">
-        <button class="search-submit" id="searchSubmit"><img src="images/search.png" alt="search"></button>
+        <button class="search-submit" id="searchSubmit">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="7" stroke="white" stroke-width="2.5"/>
+                <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
     </div>
 </div>
 <!-- Sidebar Drawer -->
@@ -71,7 +79,12 @@
     <div class="top-bar">
         <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
         <div class="top-actions">
-            <button id="searchToggle" aria-label="Search city"><img src="images/search.png" alt="search"></button>
+            <button id="searchToggle" aria-label="Search city">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="7" stroke="white" stroke-width="2.5"/>
+                    <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+            </button>
             <button id="geoBtn" aria-label="My location" title="Use my location">📍</button>
         </div>
     </div>
@@ -172,8 +185,28 @@
             </div>
         </div>
 
-        <!-- Sunrise / Sunset -->
+        <!-- Sunrise / Sunset with Sun Arc -->
         <div class="card-section" id="sunCard">
+            <div class="sun-arc-wrap">
+                <svg viewBox="0 0 300 120" class="sun-arc-svg" id="sunArcSvg">
+                    <defs>
+                        <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="rgba(255,200,50,0.3)"/>
+                            <stop offset="50%" stop-color="rgba(255,200,50,0.6)"/>
+                            <stop offset="100%" stop-color="rgba(255,150,50,0.3)"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M30,100 Q150,0 270,100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="6,4"/>
+                    <line x1="30" y1="100" x2="270" y2="100" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                    <circle id="sunDot" cx="150" cy="50" r="8" fill="#f9d71c" filter="url(#sunGlow)"/>
+                    <defs>
+                        <filter id="sunGlow">
+                            <feGaussianBlur stdDeviation="3" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                    </defs>
+                </svg>
+            </div>
             <div class="sun-strip">
                 <div class="sun-block">
                     <div class="sun-emoji">🌅</div>
@@ -185,6 +218,43 @@
                     <p class="sun-label">Sunset</p>
                     <p class="sun-value" id="sunsetVal">—</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Moonrise / Moonset -->
+        <div class="card-section" id="moonCard">
+            <div class="moon-layout">
+                <div class="moon-visual">
+                    <div class="moon-icon" id="moonIcon">🌔</div>
+                    <p class="moon-phase-name" id="moonPhaseName">Waxing gibbous</p>
+                </div>
+                <div class="moon-times">
+                    <div class="moon-time-row">
+                        <p class="moon-time-label">Moonrise</p>
+                        <p class="moon-time-value" id="moonriseVal">—</p>
+                    </div>
+                    <div class="moon-time-row">
+                        <p class="moon-time-label">Moonset</p>
+                        <p class="moon-time-value" id="moonsetVal">—</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weather Map -->
+        <div class="card-section" id="mapCard">
+            <div class="map-header">
+                <p class="map-title">🗺️ Weather Map</p>
+                <div class="map-layers">
+                    <button class="map-layer-btn active" data-layer="clouds_new">☁️ Clouds</button>
+                    <button class="map-layer-btn" data-layer="precipitation_new">🌧️ Rain</button>
+                    <button class="map-layer-btn" data-layer="temp_new">🌡️ Temp</button>
+                    <button class="map-layer-btn" data-layer="wind_new">💨 Wind</button>
+                </div>
+            </div>
+            <div class="map-container">
+                <div id="weatherMap"></div>
+                <div class="map-active-label" id="mapActiveLabel">☁️ Cloud Cover</div>
             </div>
         </div>
 
@@ -281,6 +351,8 @@
         $("#detVisibility").textContent = (d.visibility / 1000).toFixed(1) + " km";
         $("#sunriseVal").textContent    = timeStr(d.sys.sunrise, d.timezone);
         $("#sunsetVal").textContent     = timeStr(d.sys.sunset, d.timezone);
+        updateSunArc(d.sys.sunrise, d.sys.sunset, d.timezone);
+        renderMoon(d.coord.lat, d.timezone);
 
         // Summary
         const desc = d.weather[0].description;
@@ -479,7 +551,190 @@
         renderHero();
         renderHourly();
         renderDaily();
+        updateMap();
     }
+
+    // ── Sun Arc Position ────────────────────────
+    function updateSunArc(sunriseUnix, sunsetUnix, tz) {
+        const now = Math.floor(Date.now() / 1000);
+        const dayLength = sunsetUnix - sunriseUnix;
+        let progress = (now - sunriseUnix) / dayLength;
+        progress = Math.max(0, Math.min(1, progress));
+
+        // Quadratic bezier: M30,100 Q150,0 270,100
+        const t = progress;
+        const x = (1-t)*(1-t)*30 + 2*(1-t)*t*150 + t*t*270;
+        const y = (1-t)*(1-t)*100 + 2*(1-t)*t*0 + t*t*100;
+
+        const sunDot = document.getElementById("sunDot");
+        if (sunDot) {
+            sunDot.setAttribute("cx", x);
+            sunDot.setAttribute("cy", y);
+            sunDot.style.opacity = (now < sunriseUnix || now > sunsetUnix) ? "0.2" : "1";
+        }
+    }
+
+    // ── Moon Phase Calculation ──────────────────
+    function renderMoon(latUnused, tz) {
+        const now = new Date();
+        // Synodic month calculation from known new moon (Jan 6, 2000 18:14 UTC)
+        const knownNew = new Date(Date.UTC(2000, 0, 6, 18, 14, 0));
+        const diffDays = (now - knownNew) / (1000 * 60 * 60 * 24);
+        const synodicMonth = 29.53058867;
+        const moonAge = ((diffDays % synodicMonth) + synodicMonth) % synodicMonth;
+        const phase = moonAge / synodicMonth;
+
+        let phaseName, phaseEmoji;
+        if (phase < 0.0625)      { phaseName = "New moon";        phaseEmoji = "\ud83c\udf11"; }
+        else if (phase < 0.1875) { phaseName = "Waxing crescent"; phaseEmoji = "\ud83c\udf12"; }
+        else if (phase < 0.3125) { phaseName = "First quarter";   phaseEmoji = "\ud83c\udf13"; }
+        else if (phase < 0.4375) { phaseName = "Waxing gibbous";  phaseEmoji = "\ud83c\udf14"; }
+        else if (phase < 0.5625) { phaseName = "Full moon";       phaseEmoji = "\ud83c\udf15"; }
+        else if (phase < 0.6875) { phaseName = "Waning gibbous";  phaseEmoji = "\ud83c\udf16"; }
+        else if (phase < 0.8125) { phaseName = "Last quarter";    phaseEmoji = "\ud83c\udf17"; }
+        else if (phase < 0.9375) { phaseName = "Waning crescent"; phaseEmoji = "\ud83c\udf18"; }
+        else                     { phaseName = "New moon";        phaseEmoji = "\ud83c\udf11"; }
+
+        $("#moonIcon").textContent = phaseEmoji;
+        $("#moonPhaseName").textContent = phaseName;
+
+        // Approximate moonrise/set: new moon ~6AM rise; full moon ~6PM rise
+        const riseBaseH = 6 + (moonAge / synodicMonth) * 12;
+        const setBaseH = riseBaseH + 12;
+        const rH = Math.floor(riseBaseH % 24);
+        const rM = Math.floor((riseBaseH % 1) * 60);
+        const sH = Math.floor(setBaseH % 24);
+        const sM = Math.floor((setBaseH % 1) * 60);
+
+        const fmt12 = (h, m) => {
+            const ap = h >= 12 ? "pm" : "am";
+            return `${h % 12 || 12}:${String(m).padStart(2,"0")} ${ap}`;
+        };
+
+        $("#moonriseVal").textContent = fmt12(rH, rM);
+        $("#moonsetVal").textContent  = fmt12(sH, sM);
+    }
+
+    // ── Weather Map (Leaflet) ──────────────────
+    let weatherMap = null;
+    let mapMarker = null;
+    let activeWeatherLayer = null;
+    let activeLayerName = "clouds_new";
+    let rainViewerTimestamp = "";
+
+    // Fetch latest RainViewer radar timestamp
+    async function fetchRainViewerTime() {
+        try {
+            const res = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+            const data = await res.json();
+            if (data.radar && data.radar.past && data.radar.past.length) {
+                rainViewerTimestamp = data.radar.past[data.radar.past.length - 1].path;
+            }
+        } catch(e) { /* silent fail */ }
+    }
+
+    function getLayerUrl(layerName) {
+        if (layerName === "precipitation_new" && rainViewerTimestamp) {
+            // Real radar data from RainViewer (free, very visual)
+            return `https://tilecache.rainviewer.com${rainViewerTimestamp}/256/{z}/{x}/{y}/2/1_1.png`;
+        }
+        // OpenWeatherMap layers
+        return `https://tile.openweathermap.org/map/${layerName}/{z}/{x}/{y}.png?appid=${API_KEY}`;
+    }
+
+    function getLayerOpacity(layerName) {
+        const opacities = {
+            clouds_new: 0.9,
+            precipitation_new: 0.85,
+            temp_new: 1.0,
+            wind_new: 0.9
+        };
+        return opacities[layerName] || 0.9;
+    }
+
+    async function initMap() {
+        if (weatherMap) return;
+
+        // Fetch rain radar timestamp
+        await fetchRainViewerTime();
+
+        weatherMap = L.map("weatherMap", {
+            zoomControl: false,
+            attributionControl: false,
+            scrollWheelZoom: true,
+        }).setView([20, 78], 5);
+
+        // Light base tile layer
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+            maxZoom: 18,
+        }).addTo(weatherMap);
+
+        // Zoom control bottom-right
+        L.control.zoom({ position: "bottomright" }).addTo(weatherMap);
+
+        // Default weather overlay
+        setWeatherLayer(activeLayerName);
+    }
+
+    function setWeatherLayer(layerName) {
+        if (activeWeatherLayer && weatherMap) {
+            weatherMap.removeLayer(activeWeatherLayer);
+            activeWeatherLayer = null;
+        }
+        activeLayerName = layerName;
+
+        const url = getLayerUrl(layerName);
+        const opacity = getLayerOpacity(layerName);
+
+        activeWeatherLayer = L.tileLayer(url, {
+            maxZoom: 18,
+            opacity: opacity,
+            tileSize: 256,
+            crossOrigin: true,
+        });
+        activeWeatherLayer.addTo(weatherMap);
+
+        // Update active label on map
+        const label = document.getElementById("mapActiveLabel");
+        const names = {
+            clouds_new: "☁️ Cloud Cover",
+            precipitation_new: "🌧️ Rain Radar",
+            temp_new: "🌡️ Temperature",
+            wind_new: "💨 Wind Speed"
+        };
+        if (label) label.textContent = names[layerName] || layerName;
+    }
+
+    function updateMap() {
+        if (!currentData) return;
+        const lat = currentData.coord.lat;
+        const lon = currentData.coord.lon;
+
+        // Defer init until card is visible
+        setTimeout(async () => {
+            await initMap();
+            weatherMap.flyTo([lat, lon], 6, { duration: 1.5 });
+
+            if (mapMarker) weatherMap.removeLayer(mapMarker);
+            mapMarker = L.marker([lat, lon]).addTo(weatherMap)
+                .bindPopup(`<b>${currentData.name}</b><br>${currentData.weather[0].description}`)
+                .openPopup();
+
+            weatherMap.invalidateSize();
+        }, 400);
+    }
+
+
+
+
+    // Layer toggle buttons
+    document.querySelectorAll(".map-layer-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".map-layer-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            if (weatherMap) setWeatherLayer(btn.dataset.layer);
+        });
+    });
 
     // ── Fetch ───────────────────────────────────
     async function fetchWeather(city) {
@@ -544,22 +799,124 @@
 
     // ── Events ──────────────────────────────────
     // Search overlay
+    const suggestionsDropdown = $("#suggestionsDropdown");
+    let debounceTimer = null;
+
     $("#searchToggle").addEventListener("click", () => {
         searchOverlay.classList.add("active");
         searchInput.value = "";
+        suggestionsDropdown.innerHTML = "";
+        suggestionsDropdown.classList.remove("visible");
         searchInput.focus();
     });
-    $("#searchClose").addEventListener("click", () => searchOverlay.classList.remove("active"));
+    $("#searchClose").addEventListener("click", () => {
+        searchOverlay.classList.remove("active");
+        suggestionsDropdown.innerHTML = "";
+        suggestionsDropdown.classList.remove("visible");
+    });
 
     function doSearch() {
         const city = searchInput.value.trim();
         if (city) {
             searchOverlay.classList.remove("active");
+            suggestionsDropdown.innerHTML = "";
+            suggestionsDropdown.classList.remove("visible");
             fetchWeather(city);
         }
     }
     $("#searchSubmit").addEventListener("click", doSearch);
-    searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+    searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            doSearch();
+        } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            const first = suggestionsDropdown.querySelector(".suggestion-item");
+            if (first) first.focus();
+        }
+    });
+
+    // ── Auto-Suggest via Geocoding API ────────
+    async function fetchSuggestions(query) {
+        try {
+            const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=5&appid=${API_KEY}`);
+            if (!res.ok) return [];
+            return await res.json();
+        } catch {
+            return [];
+        }
+    }
+
+    function getCountryFlag(countryCode) {
+        if (!countryCode || countryCode.length !== 2) return "";
+        const base = 0x1F1E6;
+        const chars = [...countryCode.toUpperCase()].map(c => String.fromCodePoint(base + c.charCodeAt(0) - 65));
+        return chars.join("");
+    }
+
+    function renderSuggestions(results) {
+        suggestionsDropdown.innerHTML = "";
+        if (!results.length) {
+            suggestionsDropdown.classList.remove("visible");
+            return;
+        }
+        suggestionsDropdown.classList.add("visible");
+
+        results.forEach((place, idx) => {
+            const item = document.createElement("button");
+            item.className = "suggestion-item";
+            item.tabIndex = 0;
+
+            const flag = getCountryFlag(place.country);
+            const stateStr = place.state ? `${place.state}, ` : "";
+            const countryStr = place.country || "";
+
+            item.innerHTML = `
+                <span class="suggestion-icon">${flag || "📍"}</span>
+                <span class="suggestion-text">
+                    <span class="suggestion-city">${place.name}</span>
+                    <span class="suggestion-region">${stateStr}${countryStr}</span>
+                </span>
+            `;
+
+            item.addEventListener("click", () => {
+                searchInput.value = place.name;
+                suggestionsDropdown.innerHTML = "";
+                suggestionsDropdown.classList.remove("visible");
+                searchOverlay.classList.remove("active");
+                fetchWeather(place.name);
+            });
+
+            item.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") item.click();
+                else if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    const next = item.nextElementSibling;
+                    if (next) next.focus();
+                } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const prev = item.previousElementSibling;
+                    if (prev) prev.focus();
+                    else searchInput.focus();
+                }
+            });
+
+            suggestionsDropdown.appendChild(item);
+        });
+    }
+
+    searchInput.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        const q = searchInput.value.trim();
+        if (q.length < 2) {
+            suggestionsDropdown.innerHTML = "";
+            suggestionsDropdown.classList.remove("visible");
+            return;
+        }
+        debounceTimer = setTimeout(async () => {
+            const results = await fetchSuggestions(q);
+            renderSuggestions(results);
+        }, 300);
+    });
 
     // Geolocation
     $("#geoBtn").addEventListener("click", () => {
@@ -582,7 +939,11 @@
 
     // Click outside search to close
     searchOverlay.addEventListener("click", (e) => {
-        if (e.target === searchOverlay) searchOverlay.classList.remove("active");
+        if (e.target === searchOverlay) {
+            searchOverlay.classList.remove("active");
+            suggestionsDropdown.innerHTML = "";
+            suggestionsDropdown.classList.remove("visible");
+        }
     });
 
     // ── Character Illustrations ────────────────────
