@@ -244,7 +244,7 @@
         <!-- Weather Map -->
         <div class="card-section" id="mapCard">
             <div class="map-header">
-                <p class="map-title">🗺️ Weather Map</p>
+                <p class="map-title">🗺️ Radar and maps</p>
                 <div class="map-layers">
                     <button class="map-layer-btn active" data-layer="clouds_new">☁️ Clouds</button>
                     <button class="map-layer-btn" data-layer="precipitation_new">🌧️ Rain</button>
@@ -255,6 +255,7 @@
             <div class="map-container">
                 <div id="weatherMap"></div>
                 <div class="map-active-label" id="mapActiveLabel">☁️ Cloud Cover</div>
+                <div class="map-click-overlay" id="mapClickOverlay" title="Tap to open satellite view"></div>
             </div>
         </div>
 
@@ -724,9 +725,27 @@
         }, 400);
     }
 
-
-
-
+    // Map click → open Windy.com satellite for current city
+    (function() {
+        const overlay = document.getElementById("mapClickOverlay");
+        let downTime = 0;
+        overlay.addEventListener("mousedown", () => { downTime = Date.now(); });
+        overlay.addEventListener("mouseup", () => {
+            if (Date.now() - downTime < 200 && currentData) {
+                const lat = currentData.coord.lat;
+                const lon = currentData.coord.lon;
+                window.open(`https://www.windy.com/-Satellite-satellite?satellite,${lat},${lon},6`, "_blank");
+            }
+        });
+        overlay.addEventListener("touchstart", () => { downTime = Date.now(); }, { passive: true });
+        overlay.addEventListener("touchend", () => {
+            if (Date.now() - downTime < 200 && currentData) {
+                const lat = currentData.coord.lat;
+                const lon = currentData.coord.lon;
+                window.open(`https://www.windy.com/-Satellite-satellite?satellite,${lat},${lon},6`, "_blank");
+            }
+        });
+    })();
     // Layer toggle buttons
     document.querySelectorAll(".map-layer-btn").forEach(btn => {
         btn.addEventListener("click", () => {

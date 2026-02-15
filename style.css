@@ -1066,10 +1066,10 @@ body {
 }
 
 .map-header {
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
     flex-wrap: wrap;
     gap: 8px;
 }
@@ -1139,6 +1139,17 @@ body {
     font-family: 'Inter', sans-serif;
     pointer-events: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.map-click-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 998;
+    cursor: pointer;
+    background: transparent;
 }
 
 /* Override Leaflet popup to match theme */
